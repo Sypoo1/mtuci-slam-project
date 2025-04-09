@@ -14,7 +14,9 @@ def add_ones(x):
 IRt = np.eye(4)
 
 def extractPose(F):
-    W = np.mat([[0,-1,0],[1,0,0],[0,0,1]])
+    # W = np.mat([[0,-1,0],[1,0,0],[0,0,1]])
+    W = np.asmatrix([[0,-1,0],[1,0,0],[0,0,1]])
+
     U,d,Vt = np.linalg.svd(F)
     assert np.linalg.det(U) > 0
     if np.linalg.det(Vt) < 0:
