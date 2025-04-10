@@ -4,4 +4,12 @@ version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
 requires-python = "==3.10.12"
-dependencies = []
+dependencies = [
+    "g2o-python>=0.0.12",
+    "ipykernel>=6.29.5",
+    "opencv-python>=4.11.0.86",
+    "pyopengl>=3.1.9",
+    "pysdl2>=0.9.17",
+    "scikit-image>=0.25.2",
+    "setuptools>=78.1.0",
+]
