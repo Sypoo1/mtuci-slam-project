@@ -11,7 +11,7 @@ from utils import read_calibration_file, extract_intrinsic_matrix
 # K = extract_intrinsic_matrix(calib_lines, camera_id='P0')
 
 # Camera intrinsics
-W, H = 1920 // 2,  1080 // 2
+W, H = 1280 // 2,  720 // 2
 # F = 270
 F = 450
 K = np.array([[F, 0, W // 2], [0, F, H // 2], [0, 0, 1]])
