@@ -1,17 +1,19 @@
-import cv2
 import glob
-from display import Display
-from extractor import Frame, denormalize, match_frames, add_ones
+
+import cv2
 import numpy as np
+
+from display import Display
+from extractor import Frame, add_ones, denormalize, match_frames
 from pointmap import Map, Point
-from utils import read_calibration_file, extract_intrinsic_matrix
+from utils import extract_intrinsic_matrix, read_calibration_file
 
 # calib_file_path = "../data/data_odometry_gray/dataset/sequences/00/calib.txt"
 # calib_lines = read_calibration_file(calib_file_path)
 # K = extract_intrinsic_matrix(calib_lines, camera_id='P0')
 
 # Camera intrinsics
-W, H = 1280 // 2,  720 // 2
+W, H = 1280 // 2, 720 // 2
 # F = 270
 F = 450
 K = np.array([[F, 0, W // 2], [0, F, H // 2], [0, 0, 1]])
@@ -22,6 +24,7 @@ Kinv = np.linalg.inv(K)
 # display = Display(1920, 1080)
 mapp = Map()
 mapp.create_viewer()
+
 
 def triangulate(pose1, pose2, pts1, pts2):
     ret = np.zeros((pts1.shape[0], 4))
@@ -38,6 +41,7 @@ def triangulate(pose1, pose2, pts1, pts2):
 
     return ret
 
+
 def process_frame(img):
 
     img = cv2.resize(img, (W, H))
@@ -49,8 +53,6 @@ def process_frame(img):
     f1 = mapp.frames[-1]
     f2 = mapp.frames[-2]
 
-    
-    
     idx1, idx2, Rt = match_frames(f1, f2)
     print(f"=------------Rt {Rt}")
     # f2.pose represents the transformation from the world coordinate system to the coordinate system of the previous frame f2.
@@ -58,14 +60,12 @@ def process_frame(img):
     # By multiplying Rt with f2.pose, you get a new transformation that directly maps the world coordinate system to the coordinate system of f1.
     f1.pose = np.dot(Rt, f2.pose)
 
-
     # The output is a matrix where each row is a 3D point in homogeneous coordinates [𝑋, 𝑌, 𝑍, 𝑊]
     pts4d = triangulate(f1.pose, f2.pose, f1.pts[idx1], f2.pts[idx2])
-    
+
     # This line normalizes the 3D points by dividing each row by its fourth coordinate W
     # The homogeneous coordinates [𝑋, 𝑌, 𝑍, 𝑊] are converted to Euclidean coordinates
     pts4d /= pts4d[:, 3:]
-
 
     # Reject points without enough "Parallax" and points behind the camera
     # checks if the absolute value of the fourth coordinate W is greater than 0.005.
@@ -86,12 +86,11 @@ def process_frame(img):
         u2, v2 = denormalize(K, pt2)
 
         # cv2.circle(img, (u1,v1), 3, (0,255,0), 2)
-        cv2.circle(img, (u1,v1), 2, (77, 243, 255))
+        cv2.circle(img, (u1, v1), 2, (77, 243, 255))
 
-        cv2.line(img, (u1,v1), (u2, v2), (255,0,0))
+        cv2.line(img, (u1, v1), (u2, v2), (255, 0, 0))
         cv2.circle(img, (u2, v2), 2, (204, 77, 255))
-    
-    
+
     # 2-D display
     # img = cv2.resize(img, ( 320, 180))
     # display.paint(img)
@@ -101,21 +100,25 @@ def process_frame(img):
     mapp.display_image(img)
 
 
-if __name__== "__main__":
-    cap = cv2.VideoCapture("videos/car.mp4")
+if __name__ == "__main__":
+    # Используем вебкамеру вместо видеофайла
+    cap = cv2.VideoCapture(0)  # 0 - индекс первой доступной камеры
+
+    # Установка разрешения камеры (опционально)
+    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
+    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
 
     while cap.isOpened():
         ret, frame = cap.read()
-        # print("frame shape: ", frame.shape)
         print("\n#################  [NEW FRAME]  #################\n")
         if ret == True:
             process_frame(frame)
         else:
             break
-        
-        if cv2.waitKey(1) & 0xFF == ord('q'):
+
+        if cv2.waitKey(1) & 0xFF == ord("q"):
             break
-    
+
     # Release the capture and close any OpenCV windows
     cap.release()
     cv2.destroyAllWindows()
