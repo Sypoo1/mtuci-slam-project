@@ -3,20 +3,14 @@ import glob
 import cv2
 import numpy as np
 
+from calibration import get_camera_matrix
 from display import Display
 from extractor import Frame, add_ones, denormalize, match_frames
 from pointmap import Map, Point
-from utils import extract_intrinsic_matrix, read_calibration_file
-
-# calib_file_path = "../data/data_odometry_gray/dataset/sequences/00/calib.txt"
-# calib_lines = read_calibration_file(calib_file_path)
-# K = extract_intrinsic_matrix(calib_lines, camera_id='P0')
 
 # Camera intrinsics
-W, H = 1280 // 2, 720 // 2
-# F = 270
-F = 450
-K = np.array([[F, 0, W // 2], [0, F, H // 2], [0, 0, 1]])
+W, H = 1280, 720
+K, dist_coeffs = get_camera_matrix()
 
 
 Kinv = np.linalg.inv(K)
@@ -54,7 +48,7 @@ def process_frame(img):
     f2 = mapp.frames[-2]
 
     idx1, idx2, Rt = match_frames(f1, f2)
-    print(f"=------------Rt {Rt}")
+    # print(f"=------------Rt {Rt}")
     # f2.pose represents the transformation from the world coordinate system to the coordinate system of the previous frame f2.
     # Rt represents the transformation from the coordinate system of f2 to the coordinate system of f1.
     # By multiplying Rt with f2.pose, you get a new transformation that directly maps the world coordinate system to the coordinate system of f1.
@@ -110,7 +104,7 @@ if __name__ == "__main__":
 
     while cap.isOpened():
         ret, frame = cap.read()
-        print("\n#################  [NEW FRAME]  #################\n")
+        # print("\n#################  [NEW FRAME]  #################\n")
         if ret == True:
             process_frame(frame)
         else:

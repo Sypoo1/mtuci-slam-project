@@ -28,7 +28,7 @@ def extractPose(F):
     ret = np.eye(4)
     ret[:3, :3] = R
     ret[:3, 3] = t
-    print(d)
+    # print(d)
     return ret
 
 def extract(img):
