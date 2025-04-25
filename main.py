@@ -10,7 +10,7 @@ from pointmap import Map, Point
 
 # Camera intrinsics
 W, H = 1280, 720
-K, dist_coeffs = get_camera_matrix()
+K = get_camera_matrix()
 
 
 Kinv = np.linalg.inv(K)
