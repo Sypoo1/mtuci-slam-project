@@ -227,18 +227,8 @@ class CameraCalibrator:
                 board_size=np.array(self.board_size),
             )
             print(f"Calibration results saved to file {self.output_file}")
-
-            # Also save to root directory for compatibility with legacy code
-            np.savez(
-                "camera_calibration.npz",
-                camera_matrix=self.camera_matrix,
-                dist_coeffs=self.dist_coeffs,
-                error=self.calibration_error,
-                board_size=np.array(self.board_size),
-            )
-            print("Additional copy saved to camera_calibration.npz")
-
             return True
+        
         return False
 
     def load_calibration(self):
