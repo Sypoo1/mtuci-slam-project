@@ -1,23 +1,13 @@
-import glob
+import multiprocessing
+import sys
+import time
 
 import cv2
 import numpy as np
 
 from calibration import get_camera_matrix
-from display import Display
 from extractor import Frame, add_ones, denormalize, match_frames
 from pointmap import Map, Point
-
-# Camera intrinsics
-W, H = 1280, 720
-K = get_camera_matrix()
-
-
-Kinv = np.linalg.inv(K)
-
-# display = Display(1920, 1080)
-mapp = Map()
-mapp.create_viewer()
 
 
 def triangulate(pose1, pose2, pts1, pts2):
@@ -37,7 +27,6 @@ def triangulate(pose1, pose2, pts1, pts2):
 
 
 def process_frame(img):
-
     img = cv2.resize(img, (W, H))
     frame = Frame(mapp, img, K)
     if frame.id == 0:
@@ -86,7 +75,7 @@ def process_frame(img):
         cv2.circle(img, (u2, v2), 2, (204, 77, 255))
 
     # 2-D display
-    # img = cv2.resize(img, ( 320, 180))
+    # img = cv2.resize(img, ( 1280, 720))
     # display.paint(img)
 
     # 3-D display
@@ -95,24 +84,59 @@ def process_frame(img):
 
 
 if __name__ == "__main__":
+    # Camera intrinsics
+    W, H = 1280, 720
+    K = get_camera_matrix()
+
+    Kinv = np.linalg.inv(K)
+
     # Используем вебкамеру вместо видеофайла
-    cap = cv2.VideoCapture(0)  # 0 - индекс первой доступной камеры
+    # cap = cv2.VideoCapture(0)  # 0 - индекс первой доступной камеры
+    cap = cv2.VideoCapture("videos/car.mp4")
 
-    # Установка разрешения камеры (опционально)
-    cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
-    cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+    # Создаём общий Manager и Events
+    manager = multiprocessing.Manager()
+    pause_event = manager.Event()  # False = обрабатываем, True = пауза
+    quit_event = manager.Event()  # False = работаем, True = надо выходить
 
-    while cap.isOpened():
-        ret, frame = cap.read()
-        # print("\n#################  [NEW FRAME]  #################\n")
-        if ret == True:
+    # Инициализируем карту и вьюер
+    mapp = Map()
+    mapp.create_viewer(pause_event, quit_event)
+
+    while True:
+        # Если вьюер нажал Esc → выходим
+        if quit_event.is_set():
+            break
+
+        # Если не на паузе — читаем кадр и обрабатываем
+        if not pause_event.is_set():
+            ret, frame = cap.read()
+            if not ret:
+                break
             process_frame(frame)
         else:
-            break
+            # На паузе просто обновляем 3D‐вью, без чтения новых кадров
+            mapp.display()
 
-        if cv2.waitKey(1) & 0xFF == ord("q"):
-            break
+        # Небольшая задержка, чтобы CPU не уходил на 100%
+        time.sleep(0.01)
 
-    # Release the capture and close any OpenCV windows
+    # Завершаем захват и окна
     cap.release()
     cv2.destroyAllWindows()
+
+    # Дожидаемся корректного выхода вьювера
+    mapp.viewer_process.join()
+    if mapp.viewer_process.is_alive():
+        mapp.viewer_process.terminate()
+        mapp.viewer_process.join()
+
+
+    manager.shutdown()
+
+    # Сохраняем карту
+    mapp.save("map.npz")
+    print("Map has been saved to map.npz")
+
+    sys.exit(0)
+    print('hi')

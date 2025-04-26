@@ -2,22 +2,23 @@ import cv2
 import numpy as np
 from skimage.measure import ransac
 from skimage.transform import FundamentalMatrixTransform
-import g2o
+
 
 def add_ones(x):
-    # concatenates the original array x with the column of ones along the second axis (columns). 
-    # This converts the N×2 array to an N×3 array where each point is represented 
+    # concatenates the original array x with the column of ones along the second axis (columns).
+    # This converts the N×2 array to an N×3 array where each point is represented
     # in homogeneous coordinates as [x,y,1].
     return np.concatenate([x, np.ones((x.shape[0], 1))], axis=1)
 
 
 IRt = np.eye(4)
 
+
 def extractPose(F):
     # W = np.mat([[0,-1,0],[1,0,0],[0,0,1]])
-    W = np.asmatrix([[0,-1,0],[1,0,0],[0,0,1]])
+    W = np.asmatrix([[0, -1, 0], [1, 0, 0], [0, 0, 1]])
 
-    U,d,Vt = np.linalg.svd(F)
+    U, d, Vt = np.linalg.svd(F)
     assert np.linalg.det(U) > 0
     if np.linalg.det(Vt) < 0:
         Vt *= -1
@@ -31,9 +32,10 @@ def extractPose(F):
     # print(d)
     return ret
 
+
 def extract(img):
     orb = cv2.ORB_create()
-    
+
     # Convert to grayscale
     gray_img = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
@@ -49,12 +51,13 @@ def extract(img):
 
     return np.array([(kp.pt[0], kp.pt[1]) for kp in kps]), des
 
+
 def normalize(Kinv, pts):
-    # The inverse camera intrinsic matrix 𝐾 − 1 transforms 2D homogeneous points 
-    # from pixel coordinates to normalized image coordinates. This transformation centers 
-    # the points based on the principal point (𝑐𝑥 , 𝑐𝑦) and scales them 
-    # according to the focal lengths 𝑓𝑥 and 𝑓𝑦, effectively mapping the points 
-    # to a normalized coordinate system where the principal point becomes the origin and 
+    # The inverse camera intrinsic matrix 𝐾 − 1 transforms 2D homogeneous points
+    # from pixel coordinates to normalized image coordinates. This transformation centers
+    # the points based on the principal point (𝑐𝑥 , 𝑐𝑦) and scales them
+    # according to the focal lengths 𝑓𝑥 and 𝑓𝑦, effectively mapping the points
+    # to a normalized coordinate system where the principal point becomes the origin and
     # the distances are scaled by the focal lengths.
     return np.dot(Kinv, add_ones(pts).T).T[:, 0:2]
     # `[:, 0:2]` selects the first two columns of the resulting array, which are the normalized x and y coordinates.
@@ -80,20 +83,19 @@ def match_frames(f1, f2):
     ret = []
     idx1, idx2 = [], []
     for m, n in matches:
-        if m.distance < 0.75*n.distance:
+        if m.distance < 0.75 * n.distance:
             p1 = f1.pts[m.queryIdx]
             p2 = f2.pts[m.trainIdx]
-            
+
             # Distance test
-            # dditional distance test, ensuring that the 
+            # dditional distance test, ensuring that the
             # Euclidean distance between p1 and p2 is less than 0.1
-            if np.linalg.norm((p1-p2)) < 0.1:
+            if np.linalg.norm((p1 - p2)) < 0.1:
                 # Keep idxs
                 idx1.append(m.queryIdx)
                 idx2.append(m.trainIdx)
                 ret.append((p1, p2))
                 pass
-
 
     assert len(ret) >= 8
     ret = np.array(ret)
@@ -101,11 +103,14 @@ def match_frames(f1, f2):
     idx2 = np.array(idx2)
 
     # Fit matrix
-    model, inliers = ransac((ret[:, 0], 
-                            ret[:, 1]), FundamentalMatrixTransform, 
-                            min_samples=8, residual_threshold=0.005, 
-                            max_trials=200)
-    
+    model, inliers = ransac(
+        (ret[:, 0], ret[:, 1]),
+        FundamentalMatrixTransform,
+        min_samples=8,
+        residual_threshold=0.005,
+        max_trials=200,
+    )
+
     # Ignore outliers
     ret = ret[inliers]
     Rt = extractPose(model.params)
@@ -123,6 +128,6 @@ class Frame(object):
         mapp.frames.append(self)
 
         pts, self.des = extract(img)
-        
-        if self.des.any()!=None:
+
+        if self.des.any() != None:
             self.pts = normalize(self.Kinv, pts)
