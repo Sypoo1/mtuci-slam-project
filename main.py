@@ -38,6 +38,10 @@ def process_frame(img):
     f2 = mapp.frames[-2]
 
     idx1, idx2, Rt = match_frames(f1, f2)
+
+    if idx1 is None:
+        return 
+
     # print(f"=------------Rt {Rt}")
     # f2.pose represents the transformation from the world coordinate system to the coordinate system of the previous frame f2.
     # Rt represents the transformation from the coordinate system of f2 to the coordinate system of f1.
