@@ -19,7 +19,7 @@ def extractPose(F):
     W = np.asmatrix([[0, -1, 0], [1, 0, 0], [0, 0, 1]])
 
     U, d, Vt = np.linalg.svd(F)
-    assert np.linalg.det(U) > 0
+    assert np.linalg.det(U) > 0 # если < 0 кадр/пара кадр–кадр имеет крайне плохое качество, отражение или вылет через численную нестабильность
     if np.linalg.det(Vt) < 0:
         Vt *= -1
     R = np.dot(np.dot(U, W), Vt)
@@ -97,7 +97,13 @@ def match_frames(f1, f2):
                 ret.append((p1, p2))
                 pass
 
-    assert len(ret) >= 8
+    # # Если соответствует меньше 8, алгоритм не может однозначно вычислить фундаментальную матрицу
+    # assert len(ret) >= 8
+
+    if len(ret) < 8:
+        # недостаточно точек — пропускаем этот кадр
+        return None, None, None
+
     ret = np.array(ret)
     idx1 = np.array(idx1)
     idx2 = np.array(idx2)
