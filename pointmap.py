@@ -1,4 +1,4 @@
-from multiprocessing import Process, Queue
+from multiprocessing import Process, Queue, Value
 
 import cv2
 import numpy as np
@@ -15,33 +15,34 @@ class Map(object):
         self.q = None  # A queue for inter-process communication. | q for visualization process
         self.q_image = None
 
-        # Здесь будут прокси‐Events из Manager
-        self.pause_event = None
-        self.quit_event = None
+        # Разделяемые флаги
+        self.pause_flag = None  # multiprocessing.Value(c_bool)
+        self.quit_flag = None  # multiprocessing.Value(c_bool)
 
-        # Сохраняем ссылку на процесс, чтобы можно было .join()
+        # Процесс вьювера
         self.viewer_process = None
 
-    def create_viewer(self, pause_event, quit_event):
-        """Инициализируем очереди, сохраняем Events и спавним процесс-вьювер."""
+    def create_viewer(self, pause_flag: Value, quit_flag: Value):
+        """Запускаем вьюер в отдельном процессе."""
         self.q = Queue()
         self.q_image = Queue()
-        self.pause_event = pause_event
-        self.quit_event = quit_event
+        self.pause_flag = pause_flag
+        self.quit_flag = quit_flag
 
         p = Process(target=self.viewer_thread, args=(self.q,))
-        # убрали p.daemon = True, чтобы join() реально ждал
+        # НЕ демон, чтобы мы могли .join()
         p.start()
         self.viewer_process = p
 
-    def viewer_thread(self, q):
-        """Процесс-вьюер: инициализация и цикл рендеринга."""
-        self.viewer_init(1280, 720)  # или 1920×1080
-        while (not self.quit_event.is_set()) and (not pangolin.ShouldQuit()):
+    def viewer_thread(self, q: Queue):
+        """Цикл Pangolin-рендера."""
+        self.viewer_init(1280, 720)
+        # Пока не нажали Esc и окно не закрыто:
+        while (not self.quit_flag.value) and (not pangolin.ShouldQuit()):
             self.viewer_refresh(q)
 
-        # Если вышли по кресту или внутреннему ShouldQuit → сигналим основному процессу
-        self.quit_event.set()
+        # Если вышли через крестик или Esc:
+        self.quit_flag.value = True
         pangolin.Quit()
 
     def viewer_init(self, w, h):
@@ -64,18 +65,14 @@ class Map(object):
         # Creates a handler for 3D interaction.
         self.handler = pangolin.Handler3D(self.scam)
 
-        # Esc → set quit_event
+        # Esc → quit_flag = True
         pangolin.RegisterKeyPressCallback(
-            pangolin.PANGO_KEY_ESCAPE, lambda: self.quit_event.set()
+            pangolin.PANGO_KEY_ESCAPE, lambda: setattr(self.quit_flag, "value", True)
         )
-        # 'p' → toggle pause_event
+        # 'p' → toggle pause_flag
         pangolin.RegisterKeyPressCallback(
             ord("p"),
-            lambda: (
-                self.pause_event.clear()
-                if self.pause_event.is_set()
-                else self.pause_event.set()
-            ),
+            lambda: setattr(self.pause_flag, "value", not self.pause_flag.value),
         )
 
         # Creates a display context.

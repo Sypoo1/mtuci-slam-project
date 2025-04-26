@@ -1,6 +1,7 @@
-import multiprocessing
-import sys
+import ctypes
+import os
 import time
+from multiprocessing import Value
 
 import cv2
 import numpy as np
@@ -91,52 +92,41 @@ if __name__ == "__main__":
     Kinv = np.linalg.inv(K)
 
     # Используем вебкамеру вместо видеофайла
-    # cap = cv2.VideoCapture(0)  # 0 - индекс первой доступной камеры
-    cap = cv2.VideoCapture("videos/car.mp4")
+    cap = cv2.VideoCapture(0)  # 0 - индекс первой доступной камеры
+    # cap = cv2.VideoCapture("videos/car.mp4")
 
-    # Создаём общий Manager и Events
-    manager = multiprocessing.Manager()
-    pause_event = manager.Event()  # False = обрабатываем, True = пауза
-    quit_event = manager.Event()  # False = работаем, True = надо выходить
+    # Разделяемые флаги
+    pause_flag = Value(ctypes.c_bool, False)
+    quit_flag  = Value(ctypes.c_bool, False)
 
     # Инициализируем карту и вьюер
     mapp = Map()
-    mapp.create_viewer(pause_event, quit_event)
+    mapp.create_viewer(pause_flag, quit_flag)
 
-    while True:
-        # Если вьюер нажал Esc → выходим
-        if quit_event.is_set():
-            break
 
-        # Если не на паузе — читаем кадр и обрабатываем
-        if not pause_event.is_set():
+    while not quit_flag.value and cap.isOpened():
+        if not pause_flag.value:
             ret, frame = cap.read()
             if not ret:
                 break
             process_frame(frame)
         else:
-            # На паузе просто обновляем 3D‐вью, без чтения новых кадров
             mapp.display()
-
-        # Небольшая задержка, чтобы CPU не уходил на 100%
         time.sleep(0.01)
 
     # Завершаем захват и окна
     cap.release()
     cv2.destroyAllWindows()
 
-    # Дожидаемся корректного выхода вьювера
-    mapp.viewer_process.join()
+    mapp.viewer_process.join(timeout=2)
     if mapp.viewer_process.is_alive():
         mapp.viewer_process.terminate()
         mapp.viewer_process.join()
 
 
-    manager.shutdown()
-
     # Сохраняем карту
     mapp.save("map.npz")
     print("Map has been saved to map.npz")
 
-    sys.exit(0)
-    print('hi')
+    os._exit(0)
+
