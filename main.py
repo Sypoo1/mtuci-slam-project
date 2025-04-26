@@ -39,7 +39,7 @@ def process_frame(img):
 
     idx1, idx2, Rt = match_frames(f1, f2)
 
-    if idx1 is None:
+    if Rt is None:
         return 
 
     # print(f"=------------Rt {Rt}")
