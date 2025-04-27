@@ -31,6 +31,7 @@ sudo apt-get install cmake
 sudo apt-get install ffmpeg libavcodec-dev libavutil-dev libavformat-dev libswscale-dev
 sudo apt-get install libdc1394-22-dev libraw1394-dev
 sudo apt-get install libjpeg-dev libpng-dev libtiff5-dev libopenexr-dev
+sudo apt install libeigen3-dev
 ```
 
 #### Python 3.10 и виртуальное окружение
@@ -107,6 +108,28 @@ pip install -r requirements.txt
 > **Примечание:**
 > Если при сборке (`make -j8`) или установке возникнут ошибки, обратитесь к [этому комментарию](https://github.com/uoip/pangolin/issues/33#issuecomment-717655495) и [этому решению](https://github.com/uoip/pangolin/issues/20#issuecomment-498211997) на GitHub.
 
+8. **Проверьте, что библиотека Pangolin установлена:**
+
+   В активированном виртуальном окружении выполните:
+   ```bash
+   python
+   ```
+   В интерактивной консоли Python введите:
+   ```python
+   import pangolin
+   print(pangolin.__file__)
+   ```
+   Если ошибок нет и выводится путь к модулю — библиотека установлена корректно.
+
+   Чтобы выйти из Python, введите:
+   ```python
+   exit()
+   ```
+
+   После этого вернитесь в директорию проекта:
+   ```bash
+   cd ..
+   ```
 
 ---
 
@@ -191,90 +214,3 @@ K = get_camera_matrix()
 ```bash
 python -m calibration.show_matrix
 ```
-
----
-
-## Как работает программа
-
-При запуске основного файла `main.py`:
-- Откроется 3D-окно с визуализацией карты и траекторией движения камеры.
-- В левом нижнем углу будет отображаться 2D-изображение с наложенными ключевыми точками и связями.
-- Управление:
-  - **Клавиша `p`** — поставить процесс отрисовки на паузу/снять с паузы.
-  - **Клавиша `Tab`** — переключение в полноэкранный режим карты и обратно.
-  - **Клавиша `Esc`** — завершить программу. При завершении карта автоматически сохранится в файл `map.npz`.
-- Полученный файл `map.npz` можно затем просмотреть с помощью скрипта `view_map.py` (см. выше).
-
-> ⚠️ **ВНИМАНИЕ:** При каждом новом запуске `main.py` файл карты `map.npz` будет ПЕРЕЗАПИСАН! Если вы хотите сохранить предыдущую карту, переименуйте или скопируйте файл до следующего запуска.
-
----
-
-## Как запустить проект?
-
-После установки всех зависимостей и настройки параметров камеры выполните:
-
-```bash
-python main.py
-```
-
----
-
-## Визуализация 3D-карты
-
-Для отображения построенной 3D-карты, которая была сохранена после работы SLAM в файл `map.npz`, используйте скрипт `view_map.py`:
-
-```bash
-python view_map.py
-```
-
-Этот скрипт откроет интерактивное окно с 3D-визуализацией карты и траекторией камеры, полученной при запуске основного файла `main.py`.
-
----
-
-## Структура проекта
-
-```
-.
-├── calibration
-│   ├── camera_calibration.npz
-│   ├── camera_calibrator.py
-│   ├── get_camera_matrix.py
-│   ├── __init__.py
-│   └── show_matrix.py
-├── chessboard_images
-├── extractor.py
-├── main.py
-├── map.npz
-├── notebooks
-│   ├── bundle_adjustment.ipynb
-│   ├── mapping.ipynb
-│   └── SLAM_pipeline_step_by_step.ipynb
-├── pointmap.py
-├── pyproject.toml
-├── README.md
-├── requirements.txt
-├── test.ipynb
-├── utils.py
-├── uv.lock
-├── videos
-│   ├── car.mp4
-│   ├── test_countryroad.mp4
-│   ├── test_nyc.mp4
-│   └── test_ohio.mp4
-└── view_map.py
-```
-
----
-
-## Jupyter-ноутбуки
-
-- **SLAM_pipeline_step_by_step.ipynb** — описание всего пайплайна SLAM.
-- **mapping.ipynb** — пример по построению карты ([источник](https://github.com/SiddhantNadkarni/Parallel_SFM)).
-- **bundle_adjustment.ipynb** — разбор bundle adjustment и g2o ([источник](https://github.com/maxcrous/multiview_notebooks)).
-
-Для работы первого ноутбука потребуется датасет KITTI (grayscale, 22 ГБ):
-[Скачать KITTI Odometry](https://www.cvlibs.net/datasets/kitti/eval_odometry.php)
-
----
-
-Если потребуется помощь или возникнут вопросы — создайте issue или обратитесь к авторам исходных репозиториев.
