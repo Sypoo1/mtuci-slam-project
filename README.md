@@ -1,159 +1,245 @@
 # MTUCI SLAM Project
 
-A project for implementing SLAM (Simultaneous Localization and Mapping) using monocular camera.
+> ⚡️ Этот репозиторий основан на проекте [Monocular SLAM for Robotics implementation in python (learnopencv)](https://github.com/spmallick/learnopencv/tree/master/Monocular%20SLAM%20for%20Robotics%20implementation%20in%20python)
 
-## 1. Camera Calibration
+---
 
-For camera calibration, perform the following steps:
+## Быстрый старт
 
-1. Prepare 15-20 images with a chessboard at different angles
-2. Save them to `chessboard_images/` directory
-3. Run calibration:
+### 1. Клонирование репозитория
 
 ```bash
-python -m calibration.camera_calibrator --find-size --debug --force
-```
-
-> For detailed instructions, see [calibration/README.md](calibration/README.md)
-
-### Quick Calibration
-
-```bash
-# Find chessboard size and calibrate
-python -m calibration.camera_calibrator --find-size --debug --force
-
-# Test calibration
-python -m calibration.camera_calibrator --test
-
-# View camera matrix
-python -m calibration.show_matrix
-```
-
-## 2. Feature Detection
-
-Feature detection module allows finding keypoints in images and tracking them between frames.
-
-```bash
-# Run a feature detector demo on a video file
-python -m features.feature_detector --video=video.mp4 --detector=orb
-
-# Run a feature detector on the camera
-python -m features.feature_detector --detector=orb
-```
-
-Available detectors:
-- `orb` - ORB detector (default)
-- `sift` - SIFT detector
-- `akaze` - AKAZE detector
-
-> For detailed instructions, see [features/README.md](features/README.md)
-
-## 3. Feature Tracking
-
-Tracking features between frames:
-
-```bash
-# Run the tracker on a video file
-python -m features.feature_tracker --video=video.mp4
-
-# Run the tracker on the camera
-python -m features.feature_tracker
-```
-
-## 4. Full SLAM System
-
-Running the full SLAM system:
-
-```bash
-# Run on a video file
-python -m slam.slam_system --video=video.mp4
-
-# Run on the camera
-python -m slam.slam_system
-```
-
-## Installation and Setup
-
-```bash
-# Clone the repository
 git clone https://github.com/username/mtuci-slam-project.git
 cd mtuci-slam-project
+```
 
-# Install dependencies
+### 2. Установка зависимостей
+
+#### Системные зависимости (Ubuntu/Debian)
+
+Установите необходимые библиотеки:
+
+```bash
+sudo apt-get install libglew-dev cmake ffmpeg libavcodec-dev libavutil-dev libavformat-dev libswscale-dev \
+    libdc1394-22-dev libraw1394-dev libjpeg-dev libpng-dev libtiff5-dev libopenexr-dev
+```
+
+#### Python-зависимости
+
+Рекомендуется использовать виртуальное окружение:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+```
+
+Установите все необходимые Python-библиотеки одной командой:
+
+```bash
+pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-## Additional Information
+---
+## Установка Pangolin для Python
 
-- This project is part of the Computer Vision course at MTUCI
-- Contact: example@mtuci.ru
+1. **Активируйте виртуальное окружение (если ещё не активировано):**
+   ```bash
+   source .venv/bin/activate
+   ```
+2. **Склонируйте репозиторий с Python-обёрткой Pangolin:**
+   ```bash
+   git clone https://github.com/uoip/pangolin.git
+   cd pangolin
+   ```
+3. **Создайте папку для сборки и перейдите в неё:**
+   ```bash
+   mkdir build
+   cd build
+   ```
+4. **Соберите проект с помощью CMake:**
+   ```bash
+   cmake .. -DPython_EXECUTABLE=$(which python3) -DBUILD_PANGOLIN_FFMPEG=OFF
+   ```
+5. **Скомпилируйте библиотеку:**
+   ```bash
+   make -j8
+   cd ..
+   ```
+6. **Исправьте файл `setup.py`:**
+   - Откройте файл `setup.py` в любом текстовом редакторе.
+   - Найдите функцию `def run(self):` и добавьте строку:
+     ```python
+     install_dirs = [install_dir]
+     ```
+   - В итоге функция должна выглядеть так:
+     ```python
+     def run(self):
+         install_dir = get_python_lib()
+         install_dirs = [install_dir]
+         # ... остальной код ...
+     ```
+7. **Установите библиотеку:**
+   ```bash
+   python setup.py install
+   ```
 
-## Requirements
-
-- Python 3.8 or higher
-- OpenCV 4.5 or higher
-- NumPy
-- For a complete list, see `requirements.txt`
-
-### Implementation of Monocular Visual SLAM in Python:
+> **Примечание:**
+> Если при сборке (`make -j8`) или установке возникнут ошибки, обратитесь к [этому комментарию](https://github.com/uoip/pangolin/issues/33#issuecomment-717655495) и [этому решению](https://github.com/uoip/pangolin/issues/20#issuecomment-498211997) на GitHub.
 
 
-## Setup pangolin for python:
+---
 
-#### Install pangolin python:
-The [original library](https://github.com/stevenlovegrove/Pangolin) is written in c++, but there is [python binding](https://github.com/uoip/pangolin) available.
+## Настройка параметров камеры
 
-- **Install dependency:** For Ubuntu/Debian execute the below commands to install library dependencies,
+Перед запуском SLAM-системы необходимо задать параметры вашей камеры в файле `main.py`:
 
+- **Размер кадра:**
+  В начале файла задайте разрешение вашей камеры:
+  ```python
+  W, H = 1280, 720  # Замените на разрешение вашей камеры
+  ```
+- **Калибровочная матрица камеры (K):**
+  Для корректной работы SLAM требуется матрица внутренних параметров камеры. Получить её можно с помощью функции:
+  ```python
+  from calibration import get_camera_matrix
+  K = get_camera_matrix()
+  ```
+  Функция автоматически загрузит матрицу из файла после калибровки (см. ниже).
+
+---
+
+## Калибровка камеры
+
+Для точной работы SLAM необходимо откалибровать вашу камеру. Это позволит получить матрицу внутренних параметров (K) и коэффициенты дисторсии.
+
+### Быстрая калибровка (одной командой)
+
+1. Сделайте 15-20 фотографий шахматной доски с разных ракурсов и поместите их в папку `chessboard_images/` (поддерживаются форматы: .jpg, .png, .jpeg, .bmp).
+2. Запустите калибровку:
+   ```bash
+   python -m calibration.camera_calibrator --find-size --debug --force --test
+   ```
+   Эта команда:
+   - Автоматически определит оптимальный размер шахматной доски
+   - Проведёт калибровку
+   - Покажет результаты и сохранит матрицу камеры в файлы `calibration/camera_calibration.npz` и `camera_calibration.npz`
+
+### Калибровка по шагам (для контроля)
+
+1. **Подготовьте изображения**
+   - Сделайте 15-20 фото шахматной доски с разных углов
+   - Поместите их в папку `chessboard_images/`
+
+2. **Определите размер доски**
+   ```bash
+   python -m calibration.camera_calibrator --find-size
+   ```
+
+3. **Выполните калибровку**
+   (замените 7x6 на найденный размер)
+   ```bash
+   python -m calibration.camera_calibrator --size=7x6 --debug --force
+   ```
+
+4. **Проверьте результат**
+   ```bash
+   python -m calibration.camera_calibrator --test
+   ```
+
+#### Использование матрицы камеры в проекте
+
+После калибровки используйте функцию:
+```python
+from calibration import get_camera_matrix
+K = get_camera_matrix()
 ```
-sudo apt-get install libglew-dev
-sudo apt-get install cmake
-sudo apt-get install ffmpeg libavcodec-dev libavutil-dev libavformat-dev libswscale-dev
-sudo apt-get install libdc1394-22-dev libraw1394-dev
-sudo apt-get install libjpeg-dev libpng-dev libtiff5-dev libopenexr-dev
+- `K` — матрица внутренних параметров камеры
+
+Матрица будет автоматически использоваться в SLAM через вызов `get_camera_matrix()` в `main.py`.
+
+#### Дополнительные параметры калибровки
+- `--folder=path` — папка с изображениями (по умолчанию `chessboard_images`)
+- `--output=path` — путь для сохранения калибровки (по умолчанию `calibration/camera_calibration.npz`)
+- `--force` — принудительная перекалибровка
+- `--debug` — отображение процесса поиска доски
+- `--test` — просмотр результатов калибровки
+
+#### Просмотр текущей матрицы камеры
+
+Чтобы вывести информацию о текущей матрице камеры без калибровки:
+```bash
+python -m calibration.show_matrix
 ```
 
-- Don't need to follow the [Very Optional Dependencies](https://github.com/uoip/pangolin?tab=readme-ov-file#very-optional-dependencies) from the repository.
+---
 
-- **Install the Library:** Execute the below commands to install *pangolin*,
-```
-git clone https://github.com/uoip/pangolin.git
-cd pangolin
-mkdir build
-cd build
-cmake ..
-make -j8
-cd ..
-python setup.py install
-```
+## Как запустить проект?
 
-In the `make -j8` you might get some error, just follow the comment mentioned in this [github issue](https://github.com/uoip/pangolin/issues/33#issuecomment-717655495). Running the `python setup.py install` might throw an silly error, use this [comment](https://github.com/uoip/pangolin/issues/20#issuecomment-498211997) from the exact issue to solve this.
-
-- Other dependencies are pip installable.
-
-
-## How to run?
+После установки всех зависимостей и настройки параметров камеры выполните:
 
 ```bash
 python main.py
 ```
 
-## Code structure:
-```bash
-├── display.py
-├── extractor.py
-├── pointmap.py
-├── main.py
-├── notebooks
-│   ├── bundle_adjustment.ipynb
-│   ├── mapping.ipynb
-│   └── SLAM_pipeline_step_by_step.ipynb
+---
 
+## Визуализация 3D-карты
+
+Для отображения построенной 3D-карты, которая была сохранена после работы SLAM в файл `map.npz`, используйте скрипт `view_map.py`:
+
+```bash
+python view_map.py
 ```
 
-In the notebook section we have shown how to run all the components of a monocular slam,
-- `SLAM_pipeline_step_by_step.ipynb` Describes the entire pipeline
-- `mapping.ipynb` is another resource for mapping [source](https://github.com/SiddhantNadkarni/Parallel_SFM)
--  `bundle_adjustment.ipynb` another great resource to understand g2o and bundle adjustment. [source](https://github.com/maxcrous/multiview_notebooks)
+Этот скрипт откроет интерактивное окно с 3D-визуализацией карты и траекторией камеры, полученной при запуске основного файла `main.py`.
 
-1st notebook uses the kitti dataset (grayscale, 22 GB), [download it from here](https://www.cvlibs.net/datasets/kitti/eval_odometry.php).
+---
+
+## Структура проекта
+
+```
+.
+├── calibration
+│   ├── camera_calibration.npz
+│   ├── camera_calibrator.py
+│   ├── get_camera_matrix.py
+│   ├── __init__.py
+│   └── show_matrix.py
+├── chessboard_images
+├── extractor.py
+├── main.py
+├── map.npz
+├── notebooks
+│   ├── bundle_adjustment.ipynb
+│   ├── mapping.ipynb
+│   └── SLAM_pipeline_step_by_step.ipynb
+├── pointmap.py
+├── pyproject.toml
+├── README.md
+├── requirements.txt
+├── test.ipynb
+├── utils.py
+├── uv.lock
+├── videos
+│   ├── car.mp4
+│   ├── test_countryroad.mp4
+│   ├── test_nyc.mp4
+│   └── test_ohio.mp4
+└── view_map.py
+```
+
+---
+
+## Jupyter-ноутбуки
+
+- **SLAM_pipeline_step_by_step.ipynb** — описание всего пайплайна SLAM.
+- **mapping.ipynb** — пример по построению карты ([источник](https://github.com/SiddhantNadkarni/Parallel_SFM)).
+- **bundle_adjustment.ipynb** — разбор bundle adjustment и g2o ([источник](https://github.com/maxcrous/multiview_notebooks)).
+
+Для работы первого ноутбука потребуется датасет KITTI (grayscale, 22 ГБ):
+[Скачать KITTI Odometry](https://www.cvlibs.net/datasets/kitti/eval_odometry.php)
+
+---
+
+Если потребуется помощь или возникнут вопросы — создайте issue или обратитесь к авторам исходных репозиториев.
