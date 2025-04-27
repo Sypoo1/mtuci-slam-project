@@ -1,27 +1,15 @@
+import ctypes
+import os
+import time
+from multiprocessing import Value
+
 import cv2
-import glob
-from display import Display
-from extractor import Frame, denormalize, match_frames, add_ones
 import numpy as np
+
+from calibration import get_camera_matrix
+from extractor import Frame, add_ones, denormalize, match_frames
 from pointmap import Map, Point
-from utils import read_calibration_file, extract_intrinsic_matrix
 
-# calib_file_path = "../data/data_odometry_gray/dataset/sequences/00/calib.txt"
-# calib_lines = read_calibration_file(calib_file_path)
-# K = extract_intrinsic_matrix(calib_lines, camera_id='P0')
-
-# Camera intrinsics
-W, H = 1920 // 2,  1080 // 2
-# F = 270
-F = 450
-K = np.array([[F, 0, W // 2], [0, F, H // 2], [0, 0, 1]])
-
-
-Kinv = np.linalg.inv(K)
-
-# display = Display(1920, 1080)
-mapp = Map()
-mapp.create_viewer()
 
 def triangulate(pose1, pose2, pts1, pts2):
     ret = np.zeros((pts1.shape[0], 4))
@@ -38,8 +26,8 @@ def triangulate(pose1, pose2, pts1, pts2):
 
     return ret
 
-def process_frame(img):
 
+def process_frame(img):
     img = cv2.resize(img, (W, H))
     frame = Frame(mapp, img, K)
     if frame.id == 0:
@@ -49,23 +37,23 @@ def process_frame(img):
     f1 = mapp.frames[-1]
     f2 = mapp.frames[-2]
 
-    
-    
     idx1, idx2, Rt = match_frames(f1, f2)
-    print(f"=------------Rt {Rt}")
+
+    if Rt is None:
+        return 
+
+    # print(f"=------------Rt {Rt}")
     # f2.pose represents the transformation from the world coordinate system to the coordinate system of the previous frame f2.
     # Rt represents the transformation from the coordinate system of f2 to the coordinate system of f1.
     # By multiplying Rt with f2.pose, you get a new transformation that directly maps the world coordinate system to the coordinate system of f1.
     f1.pose = np.dot(Rt, f2.pose)
 
-
     # The output is a matrix where each row is a 3D point in homogeneous coordinates [𝑋, 𝑌, 𝑍, 𝑊]
     pts4d = triangulate(f1.pose, f2.pose, f1.pts[idx1], f2.pts[idx2])
-    
+
     # This line normalizes the 3D points by dividing each row by its fourth coordinate W
     # The homogeneous coordinates [𝑋, 𝑌, 𝑍, 𝑊] are converted to Euclidean coordinates
     pts4d /= pts4d[:, 3:]
-
 
     # Reject points without enough "Parallax" and points behind the camera
     # checks if the absolute value of the fourth coordinate W is greater than 0.005.
@@ -86,14 +74,13 @@ def process_frame(img):
         u2, v2 = denormalize(K, pt2)
 
         # cv2.circle(img, (u1,v1), 3, (0,255,0), 2)
-        cv2.circle(img, (u1,v1), 2, (77, 243, 255))
+        cv2.circle(img, (u1, v1), 2, (77, 243, 255))
 
-        cv2.line(img, (u1,v1), (u2, v2), (255,0,0))
+        cv2.line(img, (u1, v1), (u2, v2), (255, 0, 0))
         cv2.circle(img, (u2, v2), 2, (204, 77, 255))
-    
-    
+
     # 2-D display
-    # img = cv2.resize(img, ( 320, 180))
+    # img = cv2.resize(img, ( 1280, 720))
     # display.paint(img)
 
     # 3-D display
@@ -101,21 +88,49 @@ def process_frame(img):
     mapp.display_image(img)
 
 
-if __name__== "__main__":
-    cap = cv2.VideoCapture("videos/car.mp4")
+if __name__ == "__main__":
+    # Camera intrinsics
+    W, H = 1280, 720
+    K = get_camera_matrix()
 
-    while cap.isOpened():
-        ret, frame = cap.read()
-        # print("frame shape: ", frame.shape)
-        print("\n#################  [NEW FRAME]  #################\n")
-        if ret == True:
+    Kinv = np.linalg.inv(K)
+
+    # Используем вебкамеру вместо видеофайла
+    cap = cv2.VideoCapture(0)  # 0 - индекс первой доступной камеры
+    # cap = cv2.VideoCapture("videos/car.mp4")
+
+    # Разделяемые флаги
+    pause_flag = Value(ctypes.c_bool, False)
+    quit_flag  = Value(ctypes.c_bool, False)
+
+    # Инициализируем карту и вьюер
+    mapp = Map()
+    mapp.create_viewer(pause_flag, quit_flag)
+
+
+    while not quit_flag.value and cap.isOpened():
+        if not pause_flag.value:
+            ret, frame = cap.read()
+            if not ret:
+                break
             process_frame(frame)
         else:
-            break
-        
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            break
-    
-    # Release the capture and close any OpenCV windows
+            mapp.display()
+        time.sleep(0.01)
+
+    # Завершаем захват и окна
     cap.release()
     cv2.destroyAllWindows()
+
+    mapp.viewer_process.join(timeout=2)
+    if mapp.viewer_process.is_alive():
+        mapp.viewer_process.terminate()
+        mapp.viewer_process.join()
+
+
+    # Сохраняем карту
+    mapp.save("map.npz")
+    print("Map has been saved to map.npz")
+
+    os._exit(0)
+
