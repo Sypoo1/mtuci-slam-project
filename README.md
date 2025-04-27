@@ -33,6 +33,17 @@ sudo apt-get install libdc1394-22-dev libraw1394-dev
 sudo apt-get install libjpeg-dev libpng-dev libtiff5-dev libopenexr-dev
 ```
 
+#### Python 3.10 и виртуальное окружение
+
+Перед созданием виртуального окружения убедитесь, что установлены необходимые пакеты:
+
+```bash
+sudo apt install python3.10-dev
+sudo apt install python3.10-venv
+```
+
+---
+
 #### Python-зависимости
 
 Рекомендуется использовать виртуальное окружение:
