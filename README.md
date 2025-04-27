@@ -9,7 +9,7 @@
 ### 1. Клонирование репозитория
 
 ```bash
-git clone https://github.com/username/mtuci-slam-project.git
+git clone https://github.com/Sypoo1/mtuci-slam-project.git
 cd mtuci-slam-project
 ```
 
