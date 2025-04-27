@@ -20,8 +20,11 @@ cd mtuci-slam-project
 Установите необходимые библиотеки:
 
 ```bash
-sudo apt-get install libglew-dev cmake ffmpeg libavcodec-dev libavutil-dev libavformat-dev libswscale-dev \
-    libdc1394-22-dev libraw1394-dev libjpeg-dev libpng-dev libtiff5-dev libopenexr-dev
+sudo apt-get install libglew-dev
+sudo apt-get install cmake
+sudo apt-get install ffmpeg libavcodec-dev libavutil-dev libavformat-dev libswscale-dev
+sudo apt-get install libdc1394-22-dev libraw1394-dev
+sudo apt-get install libjpeg-dev libpng-dev libtiff5-dev libopenexr-dev
 ```
 
 #### Python-зависимости
