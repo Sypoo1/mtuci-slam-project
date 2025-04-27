@@ -106,7 +106,7 @@ pip install -r requirements.txt
    ```
 
 > **Примечание:**
-> Если при сборке (`make -j8`) или установке возникнут ошибки, обратитесь к [этому комментарию](https://github.com/uoip/pangolin/issues/33#issuecomment-717655495) и [этому решению](https://github.com/uoip/pangolin/issues/20#issuecomment-498211997) на GitHub.
+> Если при сборке (`make -j8`) или установке возникнут ошибки, обратитесь к [этому комментарию](https://github.com/uoip/pangolin/issues/33#issuecomment-717655495), [этому решению](https://github.com/uoip/pangolin/issues/20#issuecomment-498211997) на GitHub, а также к [этому обсуждению ошибок сборки Pangolin](https://github.com/stevenlovegrove/Pangolin/issues/486).
 
 8. **Проверьте, что библиотека Pangolin установлена:**
 
